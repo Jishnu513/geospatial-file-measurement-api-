@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Known 1km Square</name>
+    <Placemark id="square_1km">
+      <name>Benchmark 1km Square</name>
+      <description>Known 1km x 1km calibration square</description>
+      <ExtendedData>
+        <Data name="expected_area_sq_m"><value>1000000</value></Data>
+        <Data name="expected_side_length_m"><value>1000</value></Data>
+      </ExtendedData>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              0.0,0.0,0
+              0.008993216,0.0,0
+              0.008993216,0.008993216,0
+              0.0,0.008993216,0
+              0.0,0.0,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

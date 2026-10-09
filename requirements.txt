@@ -1,0 +1,18 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+python-multipart==0.0.20
+pydantic==2.11.3
+pydantic-settings==2.9.1
+sqlalchemy==2.0.40
+geopandas==1.0.1
+pyogrio==0.10.0
+shapely==2.1.0
+pyproj==3.7.1
+defusedxml==0.7.1
+numpy==2.2.5
+pandas==2.2.3
+
+# Testing
+pytest==8.3.5
+pytest-asyncio==0.25.3
+httpx==0.28.1

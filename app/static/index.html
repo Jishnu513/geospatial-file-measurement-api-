@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geospatial File Measurement API — Visual Dashboard</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Leaflet GIS Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+  <!-- Top Application Header -->
+  <header class="app-header">
+    <div class="brand-wrapper">
+      <div class="brand-icon">
+        <i class="fa-solid fa-earth-americas"></i>
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <h1 class="brand-title">GeoMeasure API</h1>
+          <span class="brand-tag">v1.0.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="badge-live">
+        <span class="live-dot"></span>
+        <span>Service Healthy</span>
+      </div>
+      <a href="/docs" target="_blank" class="nav-link">
+        <i class="fa-solid fa-book-open"></i>
+        <span>Swagger API Docs</span>
+      </a>
+      <a href="/redoc" target="_blank" class="nav-link">
+        <i class="fa-solid fa-file-code"></i>
+        <span>ReDoc</span>
+      </a>
+      <a href="https://github.com" target="_blank" class="nav-link" id="github-repo-link">
+        <i class="fa-brands fa-github"></i>
+        <span>GitHub</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Sample Presets Action Bar -->
+  <div class="presets-bar">
+    <div class="presets-label">
+      <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-cyan);"></i>
+      <span>Instant Benchmark Datasets:</span>
+    </div>
+    <div class="presets-chips">
+      <button class="btn-chip" onclick="loadSampleDataset('sample_known_square.kml')">
+        <i class="fa-solid fa-square"></i>
+        <span>1 km² Calibration Square (Equator)</span>
+      </button>
+      <button class="btn-chip" onclick="loadSampleDataset('sample_agricultural_parcels.kml')">
+        <i class="fa-solid fa-wheat-awn"></i>
+        <span>Agricultural Farm (Parcels, Lake Hole, Canal)</span>
+      </button>
+      <button class="btn-chip" onclick="loadSampleDataset('sample_cadastral.zip')">
+        <i class="fa-solid fa-file-zipper"></i>
+        <span>Cadastral Parcels (.ZIP Shapefile)</span>
+      </button>
+      <button class="btn-chip" onclick="loadSampleDataset('sample_no_prj.zip')">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Missing .PRJ Shapefile (Auto Fallback)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Split Layout -->
+  <main class="main-workspace">
+    
+    <!-- Left Sidebar: Upload & Measurement Summary -->
+    <aside class="sidebar-panel">
+      
+      <!-- Upload Dropzone -->
+      <div class="dropzone-card" id="dropzone">
+        <input type="file" id="file-input" accept=".zip,.kml" style="display: none;">
+        <div class="dropzone-icon">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <div class="dropzone-title">Upload Geospatial File</div>
+        <div class="dropzone-subtitle">Drag and drop your file here, or click to browse</div>
+        <div class="dropzone-formats">
+          <span class="format-badge">Shapefile (.zip)</span>
+          <span class="format-badge">KML (.kml)</span>
+          <span class="format-badge">Max 50 MB</span>
+        </div>
+      </div>
+
+      <!-- File Metadata Card -->
+      <div class="panel-card" id="file-metadata-card" style="display: none;">
+        <div class="card-header-flex">
+          <span class="card-title">
+            <i class="fa-solid fa-file-lines" style="color: var(--accent-blue);"></i>
+            <span id="meta-filename">survey.kml</span>
+          </span>
+          <span class="status-badge status-completed" id="meta-status">COMPLETED</span>
+        </div>
+        
+        <div class="metrics-grid-2">
+          <div class="metric-box">
+            <div class="metric-label">Input CRS</div>
+            <div class="metric-val" id="meta-crs" style="font-size: 0.9rem;">EPSG:4326</div>
+            <div class="metric-sub">Geographic</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Projected Engine</div>
+            <div class="metric-val" id="meta-proj" style="font-size: 0.85rem;">Auto UTM Zone</div>
+            <div class="metric-sub">Per-Feature</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Feature Count</div>
+            <div class="metric-val" id="meta-count">0</div>
+            <div class="metric-sub">Features</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Processing Time</div>
+            <div class="metric-val" id="meta-time">0 ms</div>
+            <div class="metric-sub">Synchronous</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aggregated Measurement Summary -->
+      <div class="panel-card" id="summary-card" style="display: none;">
+        <div class="card-header-flex">
+          <span class="card-title">
+            <i class="fa-solid fa-chart-pie" style="color: var(--accent-emerald);"></i>
+            <span>Aggregate Measurements</span>
+          </span>
+        </div>
+
+        <div class="metrics-grid-2">
+          <div class="metric-box" style="grid-column: span 2;">
+            <div class="metric-label">Total Measured Area</div>
+            <div class="metric-val" id="sum-area-m2" style="color: var(--accent-cyan);">0.00 m²</div>
+            <div class="metric-sub" id="sum-area-ha">0.00 ha | 0.00 acres</div>
+          </div>
+          <div class="metric-box" style="grid-column: span 2;">
+            <div class="metric-label">Total Measured Length / Perimeter</div>
+            <div class="metric-val" id="sum-length-m" style="color: var(--accent-purple);">0.00 m</div>
+            <div class="metric-sub" id="sum-length-km">0.00 km | 0.00 miles</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between;">
+          <span>Supported: <strong id="sum-supported" style="color: var(--accent-emerald);">0</strong></span>
+          <span>Unsupported: <strong id="sum-unsupported" style="color: var(--text-muted);">0</strong></span>
+        </div>
+      </div>
+
+      <!-- Features Breakdown & Selector -->
+      <div class="panel-card" id="features-list-card" style="display: none; flex: 1;">
+        <div class="card-header-flex">
+          <span class="card-title">
+            <i class="fa-solid fa-layer-group" style="color: var(--accent-cyan);"></i>
+            <span>Features (<span id="features-badge-count">0</span>)</span>
+          </span>
+        </div>
+        
+        <div class="feature-list" id="feature-items-container">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Recent Uploads / Server History -->
+      <div class="panel-card">
+        <div class="card-header-flex">
+          <span class="card-title">
+            <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-amber);"></i>
+            <span>Uploaded Files</span>
+          </span>
+          <button class="copy-btn" onclick="fetchRecentFiles()">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+        
+        <div class="feature-list" id="recent-files-container" style="max-height: 180px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; padding: 1rem;">
+            Loading recent files...
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Right Panel: Leaflet Interactive Map & API Inspector -->
+    <section class="content-panel">
+      
+      <!-- Leaflet Map Viewport -->
+      <div class="map-container-wrapper">
+        <div id="map"></div>
+        
+        <!-- Map Controls -->
+        <div class="map-floating-bar">
+          <button class="map-btn" onclick="fitMapToBounds()" title="Zoom to fit all geometries">
+            <i class="fa-solid fa-expand"></i>
+            <span>Fit Bounds</span>
+          </button>
+          <button class="map-btn" onclick="toggleMapLayer()" title="Switch satellite/dark view">
+            <i class="fa-solid fa-map"></i>
+            <span id="layer-label">Satellite</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom Inspector Tabs -->
+      <div class="tabs-container">
+        <div class="tabs-nav">
+          <button class="tab-btn active" onclick="switchTab('tab-measurements', this)">
+            <i class="fa-solid fa-table-list"></i>
+            <span>Measurements Table</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab('tab-json-meas', this)">
+            <i class="fa-solid fa-code"></i>
+            <span>Measurements JSON</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab('tab-geojson', this)">
+            <i class="fa-solid fa-draw-polygon"></i>
+            <span>GeoJSON Output</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab('tab-curl', this)">
+            <i class="fa-solid fa-terminal"></i>
+            <span>cURL Generator</span>
+          </button>
+        </div>
+
+        <!-- Tab 1: Measurements Table -->
+        <div id="tab-measurements" class="tab-content active">
+          <div class="gis-table-wrapper">
+            <table class="gis-table">
+              <thead>
+                <tr>
+                  <th>Index / ID</th>
+                  <th>Geometry Type</th>
+                  <th>Status</th>
+                  <th>Primary Metric</th>
+                  <th>Geodesic WGS84 Cross-Check</th>
+                  <th>Projected UTM CRS</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="measurements-table-body">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    Upload a Shapefile (.zip) or KML file above, or click one of the benchmark datasets.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 2: Measurements JSON API Inspector -->
+        <div id="tab-json-meas" class="tab-content">
+          <div class="code-container">
+            <div class="code-header">
+              <span>GET /api/files/{id}/measurements/</span>
+              <button class="copy-btn" onclick="copyCode('json-meas-code')">
+                <i class="fa-solid fa-copy"></i>
+                <span>Copy JSON</span>
+              </button>
+            </div>
+            <pre class="code-block" id="json-meas-code">// Measurements JSON response will appear here</pre>
+          </div>
+        </div>
+
+        <!-- Tab 3: GeoJSON Output -->
+        <div id="tab-geojson" class="tab-content">
+          <div class="code-container">
+            <div class="code-header">
+              <span>GET /api/files/{id}/features/ (GeoJSON FeatureCollection)</span>
+              <button class="copy-btn" onclick="copyCode('geojson-code')">
+                <i class="fa-solid fa-copy"></i>
+                <span>Copy GeoJSON</span>
+              </button>
+            </div>
+            <pre class="code-block" id="geojson-code">// GeoJSON FeatureCollection will appear here</pre>
+          </div>
+        </div>
+
+        <!-- Tab 4: cURL Code Generator -->
+        <div id="tab-curl" class="tab-content">
+          <div class="code-container">
+            <div class="code-header">
+              <span>Terminal cURL Commands</span>
+              <button class="copy-btn" onclick="copyCode('curl-code')">
+                <i class="fa-solid fa-copy"></i>
+                <span>Copy cURL</span>
+              </button>
+            </div>
+            <pre class="code-block" id="curl-code"># Run these commands in your terminal to test the API directly:
+curl -X POST "http://localhost:8000/api/files/" \
+  -H "accept: application/json" \
+  -F "file=@sample_data/sample_known_square.kml"
+
+# Retrieve file information (Assignment schema):
+curl "http://localhost:8000/api/files/{file_id}/"
+
+# Retrieve measurements:
+curl "http://localhost:8000/api/files/{file_id}/measurements/"
+
+# Retrieve GeoJSON:
+curl "http://localhost:8000/api/files/{file_id}/features/"</pre>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Leaflet GIS Script -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Custom App Logic -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
